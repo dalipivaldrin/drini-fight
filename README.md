@@ -1,11 +1,11 @@
-# Drini Fight 🥊
+# Drini Fight – New York Edition 🥊🗽
 
 A 1-vs-1 online fighting game that runs in the browser – on phone or computer. One player creates a room with a code, the other joins with the same code, and you fight each other live.
 
 **▶ Play now:** https://dalipivaldrin.github.io/drini-fight/
 
 ## How to Play Online
-1. Player 1 enters a name and **picks a room code** (e.g. `BMW850`) → taps **Raum erstellen**
+1. Player 1 enters a name and **picks a room code** (e.g. `ARENA1`) → taps **Raum erstellen**
 2. Player 2 enters the **same code** → taps **Beitreten**
 3. Fight! Best of 3 rounds – first to win 2 rounds wins the match. Then hit **Revanche** for a rematch.
 
@@ -34,6 +34,7 @@ On phones, hold the device in landscape.
 - **Sky drops:** every few seconds a parachute drops a random item – a **heart** (+25 HP) or a **weapon** (sword, axe, hammer, spear). A weapon replaces your punch with a stronger, longer-range attack, but it only lasts **15 seconds** and only one player can hold it
 - **No accidental zoom:** pinch and double-tap zoom are blocked so the view never shifts during a fight
 - **CPU opponent:** simple AI that approaches, attacks in range, blocks and uses specials
+- **New York Edition:** night-time NYC rooftop arena with a skyline inspired by famous Manhattan towers, water towers and a neon billboard in the middle of the city reading "DRINI FIGHTS – New York Edition"
 - **Effects:** hit sparks, screen shake, generated sound effects (Web Audio API)
 - **Mobile:** multi-touch on-screen buttons, scales to any screen
 

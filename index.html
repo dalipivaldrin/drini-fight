@@ -4,24 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#120c24">
-<title>Drini Fight</title>
+<meta name="theme-color" content="#081322">
+<title>Drini Fight – New York Edition</title>
 <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;background:#120c24;color:#fff;font-family:-apple-system,system-ui,Segoe UI,sans-serif;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#081322;color:#fff;font-family:-apple-system,system-ui,Segoe UI,sans-serif;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
 canvas{display:block}
-.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);z-index:5;padding:16px}
-.card{background:#1d1638;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:22px;width:min(420px,100%);text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(4,10,20,.72);z-index:5;padding:16px}
+.card{background:#12233a;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:22px;width:min(420px,100%);text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
 h1{margin:0 0 2px;font-size:38px;letter-spacing:1px;background:linear-gradient(90deg,#ff4d5e,#ffb547,#3fa9ff);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:900}
 .sub{color:#b8b0d8;font-size:14px;margin-bottom:16px}
 label{display:block;text-align:left;font-size:13px;color:#b8b0d8;margin:10px 0 4px}
-input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:#120c24;color:#fff;font-size:17px;text-align:center;text-transform:uppercase;letter-spacing:2px}
+input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:#081322;color:#fff;font-size:17px;text-align:center;text-transform:uppercase;letter-spacing:2px}
 input#name{text-transform:none;letter-spacing:0}
 button{font:inherit;cursor:pointer}
 .btn{display:block;width:100%;margin-top:10px;padding:13px;border:0;border-radius:12px;font-size:16px;font-weight:800;color:#fff}
-.red{background:#e8384d}.blue{background:#2b8ae0}.grey{background:#3a3160}.gold{background:#d9971e}
+.red{background:#e8384d}.blue{background:#2b8ae0}.grey{background:#2c3e57}.gold{background:#d9971e}
 .row{display:flex;gap:8px}.row .btn{flex:1}
 #status{min-height:22px;margin-top:12px;font-size:14px;color:#ffd36a}
 .code{font-size:34px;font-weight:900;letter-spacing:6px;color:#ffd36a;margin:8px 0}
@@ -29,7 +29,7 @@ button{font:inherit;cursor:pointer}
 #touch{position:fixed;inset:0;pointer-events:none;z-index:3;display:none}
 .tb{position:absolute;pointer-events:auto;border-radius:50%;background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.4);color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:15px;touch-action:none}
 .tb.on{background:rgba(255,255,255,.38)}
-#rotate{position:fixed;inset:0;z-index:9;background:#120c24;display:none;align-items:center;justify-content:center;text-align:center;font-size:20px;font-weight:800;padding:30px}
+#rotate{position:fixed;inset:0;z-index:9;background:#081322;display:none;align-items:center;justify-content:center;text-align:center;font-size:20px;font-weight:800;padding:30px}
 .hidden{display:none!important}
 </style>
 </head>
@@ -39,11 +39,11 @@ button{font:inherit;cursor:pointer}
 <div id="menu" class="overlay">
   <div class="card">
     <h1>DRINI FIGHT</h1>
-    <div class="sub">1 gegen 1 – online mit Raumcode</div>
+    <div class="sub">New York Edition · 1 gegen 1 online mit Raumcode</div>
     <label for="name">Dein Name</label>
     <input id="name" maxlength="12" placeholder="z. B. Drini">
     <label for="code">Raumcode (selbst festlegen oder vom Freund)</label>
-    <input id="code" maxlength="10" placeholder="z. B. BMW850" autocomplete="off">
+    <input id="code" maxlength="10" placeholder="z. B. ARENA1" autocomplete="off">
     <div class="row">
       <button class="btn red" id="hostBtn">Raum erstellen</button>
       <button class="btn blue" id="joinBtn">Beitreten</button>
@@ -424,22 +424,71 @@ const COL = [{ main: '#ff4d5e', dark: '#a8202f', band: '#ffd36a', skin: '#e0ac7e
 const bg = document.createElement('canvas'); bg.width = W; bg.height = H;
 (function drawBg(){
   const b = bg.getContext('2d');
-  const g = b.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1a1040'); g.addColorStop(.6, '#5a2a6e'); g.addColorStop(1, '#ff8a5c');
+  let seed = 11; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  // Nachthimmel: Dunkelblau mit orangem Großstadt-Glühen am Horizont
+  const g = b.createLinearGradient(0, 0, 0, FLOOR);
+  g.addColorStop(0, '#050b18'); g.addColorStop(.45, '#0d2340'); g.addColorStop(.8, '#2c4a6b'); g.addColorStop(1, '#e08a4a');
   b.fillStyle = g; b.fillRect(0, 0, W, H);
-  b.fillStyle = 'rgba(255,200,120,.9)'; b.beginPath(); b.arc(W/2, 300, 90, 0, Math.PI*2); b.fill();
-  let x = 0; let s = 7;
-  const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
-  while (x < W) { const w = 40 + rnd()*80, h = 80 + rnd()*200; b.fillStyle = '#24163f'; b.fillRect(x, FLOOR - 40 - h, w, h + 40);
-    for (let yy = FLOOR - 30 - h; yy < FLOOR - 50; yy += 18) for (let xx = x + 6; xx < x + w - 10; xx += 14) if (rnd() < .3) { b.fillStyle = '#ffcf6a'; b.fillRect(xx, yy, 6, 8); }
-    x += w + 3; }
-  // Dach-Arena
-  b.fillStyle = '#2e2552'; b.fillRect(0, FLOOR, W, H - FLOOR);
-  b.fillStyle = '#4a3d7d'; b.fillRect(0, FLOOR, W, 6);
-  b.strokeStyle = 'rgba(255,255,255,.08)'; b.lineWidth = 2;
-  for (let i = -10; i < 20; i++) { b.beginPath(); b.moveTo(W/2 + i*40, FLOOR + 6); b.lineTo(W/2 + i*110, H); b.stroke(); }
-  // Seile / Geländer
-  b.strokeStyle = 'rgba(255,255,255,.18)'; b.lineWidth = 3;
-  for (const yy of [FLOOR - 60, FLOOR - 30]) { b.beginPath(); b.moveTo(0, yy); b.lineTo(W, yy); b.stroke(); }
+  for (let i = 0; i < 90; i++) { b.fillStyle = `rgba(255,255,255,${.3 + rnd()*.6})`; b.fillRect(rnd()*W, rnd()*200, 1.5, 1.5); }
+  b.fillStyle = 'rgba(245,240,220,.95)'; b.beginPath(); b.arc(905, 150, 22, 0, Math.PI*2); b.fill();
+  b.fillStyle = 'rgba(245,240,220,.12)'; b.beginPath(); b.arc(905, 150, 42, 0, Math.PI*2); b.fill();
+
+  const win = (x, y, w, h, dens, col) => { for (let yy = y + 8; yy < h - 6; yy += 12) for (let xx = x + 5; xx < x + w - 6; xx += 9) if (rnd() < dens) { b.fillStyle = col(); b.fillRect(xx, yy, 4, 6); } };
+  const warm = () => rnd() < .8 ? '#ffd57a' : '#fff2c4';
+  const base = FLOOR - 30;
+  // hintere Skyline (Dunst)
+  let x = -10;
+  while (x < W) { const w = 30 + rnd()*50, h = 90 + rnd()*120; b.fillStyle = '#1c3350'; b.fillRect(x, base - h, w, h + 30); x += w + 2; }
+  // Wahrzeichen-Silhouetten (vorne)
+  const front = '#0b1626';
+  function tower(x, w, h){ b.fillStyle = front; b.fillRect(x, base - h, w, h + 30); win(x, base - h, w, base, .33, warm); }
+  // Empire-State-artig: gestufter Turm mit Spitze
+  (function(){ const cx = 190; b.fillStyle = front;
+    b.fillRect(cx - 50, base - 170, 100, 200); b.fillRect(cx - 36, base - 235, 72, 70); b.fillRect(cx - 22, base - 280, 44, 50); b.fillRect(cx - 12, base - 305, 24, 30);
+    b.fillRect(cx - 4, base - 345, 8, 42); b.fillRect(cx - 1.5, base - 385, 3, 42);
+    win(cx - 50, base - 170, 100, base, .35, warm); win(cx - 36, base - 235, 72, base - 170, .4, warm); win(cx - 22, base - 280, 44, base - 235, .45, warm);
+    b.fillStyle = '#ff4040'; b.beginPath(); b.arc(cx, base - 386, 2.5, 0, Math.PI*2); b.fill(); })();
+  // Chrysler-artig: Krone mit Bögen
+  (function(){ const cx = 470; b.fillStyle = front;
+    b.fillRect(cx - 34, base - 200, 68, 230);
+    for (let k = 0; k < 4; k++) { const ww = 52 - k*12, hh = base - 200 - k*20; b.beginPath(); b.moveTo(cx - ww/2, hh); b.quadraticCurveTo(cx, hh - 34, cx + ww/2, hh); b.closePath(); b.fill(); }
+    b.beginPath(); b.moveTo(cx - 4, base - 270); b.lineTo(cx, base - 330); b.lineTo(cx + 4, base - 270); b.fill();
+    b.strokeStyle = '#e8c27a'; b.lineWidth = 1.5; for (let k = 0; k < 4; k++) { const ww = 52 - k*12, hh = base - 200 - k*20; b.beginPath(); b.moveTo(cx - ww/2 + 4, hh - 2); b.quadraticCurveTo(cx, hh - 30, cx + ww/2 - 4, hh - 2); b.stroke(); }
+    win(cx - 34, base - 200, 68, base, .35, warm); })();
+  // One-WTC-artig: verjüngter Glasturm
+  (function(){ const cx = 770; const gg = b.createLinearGradient(cx - 40, 0, cx + 40, 0); gg.addColorStop(0, '#132a45'); gg.addColorStop(.5, '#1f4a72'); gg.addColorStop(1, '#0e1f35');
+    b.fillStyle = gg; b.beginPath(); b.moveTo(cx - 42, base + 30); b.lineTo(cx - 42, base - 60); b.lineTo(cx - 18, base - 300); b.lineTo(cx + 18, base - 300); b.lineTo(cx + 42, base - 60); b.lineTo(cx + 42, base + 30); b.closePath(); b.fill();
+    b.strokeStyle = 'rgba(160,210,255,.35)'; b.lineWidth = 1; b.beginPath(); b.moveTo(cx, base - 300); b.lineTo(cx, base + 30); b.stroke();
+    b.fillStyle = front; b.fillRect(cx - 2, base - 360, 4, 62); b.fillStyle = '#fff'; b.beginPath(); b.arc(cx, base - 362, 2.5, 0, Math.PI*2); b.fill(); })();
+  // Füller-Gebäude
+  const fill = [[0, 60, 120], [60, 70, 90], [250, 55, 140], [305, 60, 110], [365, 70, 150], [530, 60, 130], [590, 70, 95], [660, 55, 160], [825, 60, 120], [885, 80, 100]];
+  for (const [fx, fw, fh] of fill) { tower(fx, fw, fh); if (rnd() < .5) { b.fillStyle = front; b.fillRect(fx + fw*0.3, base - fh - 14, 6, 14); } }
+  // Wassertürme (typisch NYC)
+  for (const wx of [80, 320, 610]) { b.fillStyle = '#3a2a1e'; b.fillRect(wx, base - 132, 18, 16); b.beginPath(); b.moveTo(wx - 2, base - 132); b.lineTo(wx + 9, base - 142); b.lineTo(wx + 20, base - 132); b.fill(); b.fillRect(wx + 2, base - 116, 2, 8); b.fillRect(wx + 14, base - 116, 2, 8); }
+
+  // Neon-Leuchtreklame mitten in der Stadt
+  b.save();
+  const bx = W/2 - 290, by = 196, bw2 = 580, bh2 = 118;
+  b.fillStyle = '#0b1626'; b.fillRect(W/2 - 160, by + bh2, 10, base - by - bh2 + 30); b.fillRect(W/2 + 150, by + bh2, 10, base - by - bh2 + 30);
+  b.fillStyle = 'rgba(6,12,24,.92)'; b.fillRect(bx, by, bw2, bh2);
+  b.strokeStyle = '#ffb347'; b.lineWidth = 3; b.shadowColor = '#ffb347'; b.shadowBlur = 12; b.strokeRect(bx + 4, by + 4, bw2 - 8, bh2 - 8);
+  b.textAlign = 'center'; b.font = '900 72px Impact, "Arial Black", system-ui, sans-serif';
+  b.shadowColor = '#ff2d55'; b.shadowBlur = 30; b.fillStyle = '#ff3b5c'; b.fillText('DRINI FIGHTS', W/2, by + 74);
+  b.shadowBlur = 10; b.fillText('DRINI FIGHTS', W/2, by + 74);
+  b.shadowBlur = 0; b.lineWidth = 2; b.strokeStyle = '#ffe1e7'; b.strokeText('DRINI FIGHTS', W/2, by + 74);
+  b.font = '800 20px system-ui, sans-serif'; b.fillStyle = '#ffd36a'; b.shadowColor = '#ffb347'; b.shadowBlur = 10;
+  b.fillText('★  NEW YORK EDITION  ★', W/2, by + 103);
+  b.restore();
+  // Dach-Arena: dunkler Asphalt
+  b.fillStyle = '#23272e'; b.fillRect(0, FLOOR, W, H - FLOOR);
+  b.fillStyle = '#596170'; b.fillRect(0, FLOOR, W, 5);
+  b.strokeStyle = 'rgba(255,255,255,.06)'; b.lineWidth = 2;
+  for (let i = -10; i < 20; i++) { b.beginPath(); b.moveTo(W/2 + i*40, FLOOR + 5); b.lineTo(W/2 + i*110, H); b.stroke(); }
+  b.fillStyle = 'rgba(255,200,60,.55)'; for (let xx = 30; xx < W; xx += 90) b.fillRect(xx, FLOOR + 40, 46, 4);
+  // Geländer
+  b.strokeStyle = 'rgba(200,215,235,.28)'; b.lineWidth = 3;
+  for (const yy of [FLOOR - 58, FLOOR - 30]) { b.beginPath(); b.moveTo(0, yy); b.lineTo(W, yy); b.stroke(); }
+  for (let xx = 20; xx < W; xx += 80) { b.beginPath(); b.moveTo(xx, FLOOR - 58); b.lineTo(xx, FLOOR); b.stroke(); }
 })();
 
 function limb(x1, y1, x2, y2, col, w){ ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
