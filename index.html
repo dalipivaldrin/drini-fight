@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#120c24">
+<title>Drini Fight</title>
+<script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#120c24;color:#fff;font-family:-apple-system,system-ui,Segoe UI,sans-serif;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+canvas{display:block}
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,6,24,.72);z-index:5;padding:16px}
+.card{background:#1d1638;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:22px;width:min(420px,100%);text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+h1{margin:0 0 2px;font-size:38px;letter-spacing:1px;background:linear-gradient(90deg,#ff4d5e,#ffb547,#3fa9ff);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:900}
+.sub{color:#b8b0d8;font-size:14px;margin-bottom:16px}
+label{display:block;text-align:left;font-size:13px;color:#b8b0d8;margin:10px 0 4px}
+input{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:#120c24;color:#fff;font-size:17px;text-align:center;text-transform:uppercase;letter-spacing:2px}
+input#name{text-transform:none;letter-spacing:0}
+button{font:inherit;cursor:pointer}
+.btn{display:block;width:100%;margin-top:10px;padding:13px;border:0;border-radius:12px;font-size:16px;font-weight:800;color:#fff}
+.red{background:#e8384d}.blue{background:#2b8ae0}.grey{background:#3a3160}.gold{background:#d9971e}
+.row{display:flex;gap:8px}.row .btn{flex:1}
+#status{min-height:22px;margin-top:12px;font-size:14px;color:#ffd36a}
+.code{font-size:34px;font-weight:900;letter-spacing:6px;color:#ffd36a;margin:8px 0}
+.small{font-size:12px;color:#8f86b5;margin-top:12px;line-height:1.5}
+#touch{position:fixed;inset:0;pointer-events:none;z-index:3;display:none}
+.tb{position:absolute;pointer-events:auto;border-radius:50%;background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.4);color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:15px;touch-action:none}
+.tb.on{background:rgba(255,255,255,.38)}
+#rotate{position:fixed;inset:0;z-index:9;background:#120c24;display:none;align-items:center;justify-content:center;text-align:center;font-size:20px;font-weight:800;padding:30px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c" width="960" height="540"></canvas></div>
+
+<div id="menu" class="overlay">
+  <div class="card">
+    <h1>DRINI FIGHT</h1>
+    <div class="sub">1 gegen 1 – online mit Raumcode</div>
+    <label for="name">Dein Name</label>
+    <input id="name" maxlength="12" placeholder="z. B. Drini">
+    <label for="code">Raumcode (selbst festlegen oder vom Freund)</label>
+    <input id="code" maxlength="10" placeholder="z. B. BMW850" autocomplete="off">
+    <div class="row">
+      <button class="btn red" id="hostBtn">Raum erstellen</button>
+      <button class="btn blue" id="joinBtn">Beitreten</button>
+    </div>
+    <button class="btn grey" id="cpuBtn">Training gegen CPU</button>
+    <div id="status"></div>
+    <div class="small">So geht's: Eine Person legt einen Code fest und tippt <b>Raum erstellen</b>. Die andere gibt denselben Code ein und tippt <b>Beitreten</b>.<br>
+    PC: A/D laufen · W springen · S blocken · J Schlag · K Tritt · L Spezial</div>
+  </div>
+</div>
+
+<div id="wait" class="overlay hidden">
+  <div class="card">
+    <div class="sub">Raum erstellt – teile diesen Code:</div>
+    <div class="code" id="waitCode"></div>
+    <div id="waitStatus" class="sub">Warte auf Gegner …</div>
+    <button class="btn grey" id="cancelBtn">Abbrechen</button>
+  </div>
+</div>
+
+<div id="end" class="overlay hidden">
+  <div class="card">
+    <h1 id="endTitle">SIEG!</h1>
+    <div class="sub" id="endSub"></div>
+    <button class="btn gold" id="rematchBtn">Revanche</button>
+    <button class="btn grey" id="menuBtn">Zum Menü</button>
+    <div id="endStatus" class="small"></div>
+  </div>
+</div>
+
+<div id="touch">
+  <div class="tb" data-b="1" style="left:18px;bottom:26px;width:66px;height:66px">◀</div>
+  <div class="tb" data-b="2" style="left:96px;bottom:26px;width:66px;height:66px">▶</div>
+  <div class="tb" data-b="4" style="left:57px;bottom:104px;width:66px;height:66px">▲</div>
+  <div class="tb" data-b="64" style="left:174px;bottom:26px;width:58px;height:58px;font-size:12px">BLOCK</div>
+  <div class="tb" data-b="8" style="right:104px;bottom:26px;width:76px;height:76px">SCHLAG</div>
+  <div class="tb" data-b="16" style="right:18px;bottom:60px;width:76px;height:76px">TRITT</div>
+  <div class="tb" data-b="32" style="right:66px;bottom:118px;width:62px;height:62px;font-size:12px;background:rgba(255,200,60,.25)">SPEZIAL</div>
+</div>
+<div id="rotate">📱↻<br>Bitte Handy quer halten</div>
+
+<script>
+(() => {
+/* ================= Grundsetup ================= */
+const W = 960, H = 540, FLOOR = 455;
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+let dpr = 1, sc = 1;
+const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+function fit(){
+  dpr = Math.min(2.5, window.devicePixelRatio || 1);
+  sc = Math.min(innerWidth / W, innerHeight / H);
+  cv.style.width = W*sc + 'px'; cv.style.height = H*sc + 'px';
+  cv.width = Math.round(W*sc*dpr); cv.height = Math.round(H*sc*dpr);
+  $('rotate').style.display = (isTouch && innerHeight > innerWidth && mode !== 'menu') ? 'flex' : 'none';
+}
+addEventListener('resize', fit); addEventListener('orientationchange', () => setTimeout(fit, 250));
+
+/* ================= Sound ================= */
+let ac = null;
+function audio(){ if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {} } if (ac && ac.state === 'suspended') ac.resume().catch(()=>{}); }
+function tone(f, d, type='square', vol=.06, slide=0){ if (!ac) return; try { const o=ac.createOscillator(), g=ac.createGain(), t=ac.currentTime; o.type=type; o.frequency.setValueAtTime(f,t); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),t+d); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.001,t+d); o.connect(g).connect(ac.destination); o.start(t); o.stop(t+d);} catch(e){} }
+function noise(d, vol=.08){ if (!ac) return; try { const b = ac.createBuffer(1, ac.sampleRate*d, ac.sampleRate), ch = b.getChannelData(0); for (let i=0;i<ch.length;i++) ch[i]=(Math.random()*2-1)*(1-i/ch.length); const s=ac.createBufferSource(), g=ac.createGain(); s.buffer=b; g.gain.value=vol; s.connect(g).connect(ac.destination); s.start(); } catch(e){} }
+const SFX = {
+  hit: () => { noise(.12, .14); tone(140, .12, 'square', .06, -60); },
+  heavy: () => { noise(.2, .18); tone(90, .2, 'sawtooth', .07, -40); },
+  block: () => tone(520, .07, 'triangle', .06),
+  swing: () => noise(.06, .03),
+  special: () => tone(300, .35, 'sawtooth', .06, 500),
+  ko: () => { noise(.5, .2); tone(200, .7, 'sawtooth', .08, -170); },
+  bell: () => { tone(880, .4, 'triangle', .07); tone(1320, .3, 'triangle', .04); }
+};
+
+/* ================= Eingabe ================= */
+// Bits: 1 links, 2 rechts, 4 springen, 8 Schlag, 16 Tritt, 32 Spezial, 64 Block
+let keyBits = 0, touchBits = 0, localEdges = 0;
+const KEYMAP = { KeyA:1, ArrowLeft:1, KeyD:2, ArrowRight:2, KeyW:4, ArrowUp:4, Space:4, KeyJ:8, KeyK:16, KeyL:32, KeyS:64, ArrowDown:64 };
+addEventListener('keydown', e => {
+  if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+  const b = KEYMAP[e.code]; if (b) { e.preventDefault(); if (!(keyBits & b)) localEdges |= b; keyBits |= b; audio(); }
+});
+addEventListener('keyup', e => { const b = KEYMAP[e.code]; if (b) keyBits &= ~b; });
+addEventListener('blur', () => { keyBits = 0; touchBits = 0; });
+document.querySelectorAll('.tb').forEach(el => {
+  const b = +el.dataset.b;
+  const down = e => { e.preventDefault(); audio(); if (!(touchBits & b)) localEdges |= b; touchBits |= b; el.classList.add('on'); try { el.setPointerCapture(e.pointerId); } catch(_){} };
+  const up = e => { e.preventDefault(); touchBits &= ~b; el.classList.remove('on'); };
+  el.addEventListener('pointerdown', down); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up); el.addEventListener('lostpointercapture', up);
+});
+const localBits = () => keyBits | touchBits;
+
+/* ================= Spiel-Simulation (läuft beim Host) ================= */
+const MOVES = {
+  punch:   { dur: 16, a0: 4,  a1: 8,  range: 78,  dmg: 6,  kb: 5,  stun: 12 },
+  kick:    { dur: 26, a0: 9,  a1: 14, range: 104, dmg: 10, kb: 9,  stun: 18 },
+  special: { dur: 26 }
+};
+function newFighter(i){ return { x: i ? 700 : 260, y: FLOOR, vx: 0, vy: 0, face: i ? -1 : 1, hp: 100, en: 0, st: 'idle', t: 0, hit: false, stun: 0, prev: 0 }; }
+let G = null, fxId = 0;
+function newGame(names){
+  G = { f: [newFighter(0), newFighter(1)], pr: [], ph: 'intro', pt: 0, timer: 60*60, wins: [0,0], round: 1, names, fx: [], winner: -1 };
+  sfxQueue('bell');
+}
+function resetRound(){ G.f = [newFighter(0), newFighter(1)]; G.pr = []; G.ph = 'intro'; G.pt = 0; G.timer = 60*60; }
+function addFx(type, x, y){ G.fx.push({ id: ++fxId, type, x, y, t: 0 }); if (G.fx.length > 20) G.fx.shift(); }
+function sfxQueue(type){ if (G) addFx('snd:' + type, 0, 0); }
+
+function applyHit(att, def, dmg, kb, stun, heavy){
+  const a = G.f[att], d = G.f[def];
+  const blocking = d.st === 'block' && d.face === -Math.sign(kb || a.face);
+  if (blocking) {
+    d.hp -= Math.ceil(dmg * 0.15); d.vx = kb * 0.5; addFx('block', d.x - Math.sign(kb)*10, d.y - 90); a.en = Math.min(100, a.en + 4);
+  } else {
+    d.hp -= dmg; d.stun = stun; d.st = 'hit'; d.t = 0; d.vx = kb; if (heavy) d.vy = -5;
+    a.en = Math.min(100, a.en + 12); d.en = Math.min(100, d.en + 7);
+    addFx(heavy ? 'heavy' : 'hit', d.x - Math.sign(kb)*12, d.y - (heavy ? 70 : 95));
+  }
+  if (d.hp <= 0 && G.ph === 'fight') {
+    d.hp = 0; d.st = 'ko'; d.vy = -8; d.vx = Math.sign(kb) * 6; addFx('ko', d.x, d.y - 80);
+    endRound(att);
+  }
+}
+function endRound(w){
+  G.ph = 'roundend'; G.pt = 0; G.lastWin = w;
+  if (w >= 0) G.wins[w]++;
+}
+
+function step(inputs, edgesArr){
+  const ph = G.ph; G.pt++;
+  for (const fx of G.fx) fx.t++;
+  G.fx = G.fx.filter(fx => fx.t < 40);
+  if (ph === 'intro' && G.pt === 100) { G.ph = 'fight'; G.pt = 0; sfxQueue('bell'); }
+  if (ph === 'fight') { G.timer--; if (G.timer <= 0) { const h0 = G.f[0].hp, h1 = G.f[1].hp; endRound(h0 === h1 ? -1 : (h0 > h1 ? 0 : 1)); } }
+  if (ph === 'roundend' && G.pt > 160) {
+    if (G.wins[0] >= 2 || G.wins[1] >= 2) { G.ph = 'matchend'; G.winner = G.wins[0] >= 2 ? 0 : 1; G.pt = 0; }
+    else { G.round++; resetRound(); }
+    return;
+  }
+  for (let i = 0; i < 2; i++) {
+    const f = G.f[i], o = G.f[1-i];
+    const inp = G.ph === 'fight' ? inputs[i] : 0;
+    const edge = G.ph === 'fight' ? ((inp & ~f.prev) | edgesArr[i]) : 0;
+    f.prev = inp;
+    const ground = f.y >= FLOOR;
+    if (f.st === 'ko') { /* nur Physik */ }
+    else if (f.stun > 0) { f.stun--; f.vx *= 0.85; if (f.stun === 0) f.st = 'idle'; }
+    else if (MOVES[f.st]) {
+      f.t++;
+      const m = MOVES[f.st];
+      if (ground) f.vx *= 0.7;
+      if (f.st === 'special' && f.t === 10) { G.pr.push({ x: f.x + f.face*45, y: f.y - 88, vx: f.face*9, o: i, life: 110 }); sfxQueue('special'); }
+      if (m.range && !f.hit && f.t >= m.a0 && f.t <= m.a1) {
+        const dx = (o.x - f.x) * f.face;
+        if (dx > 0 && dx < m.range && Math.abs(o.y - f.y) < 90 && o.st !== 'ko') { f.hit = true; applyHit(i, 1-i, m.dmg, m.kb * f.face, m.stun, f.st === 'kick'); }
+      }
+      if (f.t >= m.dur) f.st = 'idle';
+    } else {
+      if ((inp & 64) && ground) { f.st = 'block'; f.vx = 0; }
+      else {
+        const dir = ((inp & 2) ? 1 : 0) - ((inp & 1) ? 1 : 0);
+        f.vx = dir * 4.4;
+        if ((edge & 4) && ground) { f.vy = -15.5; }
+        f.st = ground ? (dir ? 'walk' : 'idle') : 'jump';
+        if (edge & 8) { f.st = 'punch'; f.t = 0; f.hit = false; sfxQueue('swing'); }
+        else if (edge & 16) { f.st = 'kick'; f.t = 0; f.hit = false; sfxQueue('swing'); }
+        else if ((edge & 32) && f.en >= 100) { f.st = 'special'; f.t = 0; f.en = 0; }
+      }
+      if (ground && f.st !== 'block') f.face = o.x > f.x ? 1 : -1;
+    }
+    f.vy += 0.8; f.x += f.vx; f.y += f.vy;
+    if (f.y >= FLOOR) { f.y = FLOOR; f.vy = 0; if (f.st === 'jump') f.st = 'idle'; }
+    f.x = Math.max(40, Math.min(W - 40, f.x));
+  }
+  // Körper auseinanderschieben
+  const a = G.f[0], b = G.f[1], dx = b.x - a.x;
+  if (Math.abs(dx) < 46 && Math.abs(a.y - b.y) < 80 && a.st !== 'ko' && b.st !== 'ko') {
+    const push = (46 - Math.abs(dx)) / 2 * (dx >= 0 ? 1 : -1);
+    a.x -= push; b.x += push;
+    a.x = Math.max(40, Math.min(W - 40, a.x)); b.x = Math.max(40, Math.min(W - 40, b.x));
+  }
+  // Projektile
+  for (const p of G.pr) {
+    p.x += p.vx; p.life--;
+    const o = G.f[1 - p.o];
+    if (o.st !== 'ko' && Math.abs(o.x - p.x) < 34 && Math.abs((o.y - 70) - p.y) < 60) { applyHit(p.o, 1 - p.o, 16, Math.sign(p.vx)*11, 26, true); p.life = 0; }
+  }
+  G.pr = G.pr.filter(p => p.life > 0 && p.x > -40 && p.x < W + 40);
+}
+
+/* ================= CPU-Gegner ================= */
+let cpuT = 0, cpuBits = 0;
+function cpuInput(){
+  const me = G.f[1], o = G.f[0], d = o.x - me.x, ad = Math.abs(d);
+  if (--cpuT > 0) return cpuBits;
+  cpuT = 6 + Math.floor(Math.random()*10); cpuBits = 0;
+  const toward = d > 0 ? 2 : 1, away = d > 0 ? 1 : 2;
+  const oAttack = MOVES[o.st] && o.st !== 'special';
+  if (oAttack && ad < 120 && Math.random() < .55) { cpuBits = 64; cpuT = 14; return cpuBits; }
+  if (me.en >= 100 && ad > 200 && Math.random() < .5) return cpuBits = 32;
+  if (ad > 110) cpuBits = toward;
+  else if (ad < 60 && Math.random() < .3) cpuBits = away;
+  if (ad < 85) cpuBits |= Math.random() < .55 ? 8 : 0; else if (ad < 108) cpuBits |= Math.random() < .45 ? 16 : 0;
+  if (Math.random() < .07) cpuBits |= 4;
+  return cpuBits;
+}
+
+/* ================= Netzwerk ================= */
+let mode = 'menu';   // menu | wait | host | guest | cpu
+let peer = null, conn = null, net = null, remoteBits = 0, remoteEdges = 0, myName = 'Spieler', lastSnap = 0, connected = false, rematchWant = [false, false];
+const useBC = /[?&]bc\b/.test(location.search);  // Testmodus ohne Internet
+
+function status(t){ $('status').textContent = t; }
+function cleanName(){ return ($('name').value.trim() || 'Spieler').slice(0, 12); }
+function cleanCode(){ return $('code').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10); }
+try { $('name').value = localStorage.getItem('df_name') || ''; } catch(e) {}
+
+function closeNet(){
+  try { conn && conn.close(); } catch(e) {}
+  try { peer && peer.destroy(); } catch(e) {}
+  try { net && net.bc && net.bc.close(); } catch(e) {}
+  peer = conn = net = null; connected = false;
+}
+
+function makeNet(sendFn, extra){ net = Object.assign({ send: o => { try { sendFn(o); } catch(e) {} } }, extra || {}); }
+
+function hostRoom(){
+  const code = cleanCode(); if (code.length < 3) { status('Bitte einen Code mit mind. 3 Zeichen eingeben.'); return; }
+  myName = cleanName(); try { localStorage.setItem('df_name', myName); } catch(e) {}
+  closeNet(); show('wait'); $('waitCode').textContent = code; $('waitStatus').textContent = 'Verbinde mit Server …';
+  if (useBC) {
+    const bc = new BroadcastChannel('df-' + code);
+    makeNet(o => bc.postMessage({ from: 'host', ...o }), { bc });
+    bc.onmessage = e => { const m = e.data; if (m.from === 'host') return; if (m.t === 'hello' && !connected) { connected = true; onConnected(true, m.name); } else onData(m); };
+    $('waitStatus').textContent = 'Warte auf Gegner … (Testmodus)';
+    mode = 'wait'; return;
+  }
+  if (typeof Peer === 'undefined') { $('waitStatus').textContent = 'Netzwerk-Bibliothek konnte nicht geladen werden. Internet prüfen.'; return; }
+  mode = 'wait';
+  peer = new Peer('drinifight-' + code, { debug: 0 });
+  peer.on('open', () => { $('waitStatus').textContent = 'Warte auf Gegner …'; });
+  peer.on('connection', c => {
+    if (conn) { c.on('open', () => { c.send({ t: 'full' }); setTimeout(() => c.close(), 300); }); return; }
+    conn = c;
+    c.on('open', () => { makeNet(o => c.open && c.send(o)); });
+    c.on('data', m => { if (m.t === 'hello' && !connected) { connected = true; onConnected(true, m.name); } else onData(m); });
+    c.on('close', onDisconnect); c.on('error', onDisconnect);
+  });
+  peer.on('error', e => {
+    if (e.type === 'unavailable-id') { show('menu'); status('Dieser Code ist schon vergeben – nimm einen anderen.'); closeNet(); mode = 'menu'; }
+    else if (!connected) { $('waitStatus').textContent = 'Verbindungsfehler (' + e.type + '). Nochmal versuchen.'; }
+  });
+  peer.on('disconnected', () => { if (peer && !peer.destroyed) try { peer.reconnect(); } catch(e) {} });
+}
+
+function joinRoom(){
+  const code = cleanCode(); if (code.length < 3) { status('Bitte den Code deines Freundes eingeben.'); return; }
+  myName = cleanName(); try { localStorage.setItem('df_name', myName); } catch(e) {}
+  closeNet(); status('Verbinde …');
+  if (useBC) {
+    const bc = new BroadcastChannel('df-' + code);
+    makeNet(o => bc.postMessage({ from: 'guest', ...o }), { bc });
+    bc.onmessage = e => { const m = e.data; if (m.from === 'guest') return; if (!connected && m.t === 's') { connected = true; onConnected(false); } onData(m); };
+    net.send({ t: 'hello', name: myName }); return;
+  }
+  if (typeof Peer === 'undefined') { status('Netzwerk-Bibliothek konnte nicht geladen werden. Internet prüfen.'); return; }
+  peer = new Peer({ debug: 0 });
+  peer.on('open', () => {
+    const c = peer.connect('drinifight-' + code, { reliable: true, serialization: 'json' });
+    conn = c;
+    const to = setTimeout(() => { if (!connected) status('Keine Antwort – stimmt der Code? Ist dein Freund im Raum?'); }, 9000);
+    c.on('open', () => { clearTimeout(to); makeNet(o => c.open && c.send(o)); net.send({ t: 'hello', name: myName }); });
+    c.on('data', m => { if (m.t === 'full') { status('Dieser Raum ist schon voll.'); closeNet(); return; } if (!connected && m.t === 's') { connected = true; onConnected(false); } onData(m); });
+    c.on('close', onDisconnect); c.on('error', onDisconnect);
+  });
+  peer.on('error', e => {
+    if (e.type === 'peer-unavailable') status('Kein Raum mit diesem Code gefunden.');
+    else status('Verbindungsfehler (' + e.type + ').');
+  });
+}
+
+function onConnected(isHost, otherName){
+  audio();
+  if (isHost) { mode = 'host'; newGame([myName, otherName || 'Gast']); rematchWant = [false, false]; }
+  else mode = 'guest';
+  show(null); fit();
+}
+function onDisconnect(){
+  if (mode === 'host' || mode === 'guest' || mode === 'wait') {
+    const was = mode; mode = 'menu'; closeNet(); show('menu');
+    status(was === 'wait' ? '' : 'Verbindung zum Gegner getrennt.');
+  }
+}
+
+function onData(m){
+  if (!m || !m.t) return;
+  if (mode === 'host') {
+    if (m.t === 'i') { remoteBits = m.k; remoteEdges |= m.e; }
+    if (m.t === 'rematch') { rematchWant[1] = true; tryRematch(); }
+  } else if (mode === 'guest') {
+    if (m.t === 's') { G = m.g; }
+  }
+}
+
+function tryRematch(){
+  if (mode === 'cpu') { newGame([myName, 'CPU']); show(null); return; }
+  if (mode === 'host') {
+    $('endStatus').textContent = rematchWant[0] ? (rematchWant[1] ? '' : 'Warte auf Gegner …') : 'Dein Gegner will eine Revanche!';
+    if (rematchWant[0] && rematchWant[1]) { rematchWant = [false, false]; newGame(G.names); show(null); }
+  }
+}
+
+/* ================= UI ================= */
+function show(id){ ['menu','wait','end'].forEach(x => $(x).classList.toggle('hidden', x !== id)); $('touch').style.display = (isTouch && !id) ? 'block' : 'none'; }
+$('hostBtn').onclick = () => { audio(); hostRoom(); };
+$('joinBtn').onclick = () => { audio(); joinRoom(); };
+$('cpuBtn').onclick = () => { audio(); myName = cleanName(); closeNet(); mode = 'cpu'; newGame([myName, 'CPU']); show(null); fit(); };
+$('cancelBtn').onclick = () => { closeNet(); mode = 'menu'; show('menu'); status(''); };
+$('menuBtn').onclick = () => { closeNet(); mode = 'menu'; G = null; show('menu'); status(''); fit(); };
+$('rematchBtn').onclick = () => {
+  if (mode === 'cpu') return tryRematch();
+  if (mode === 'host') { rematchWant[0] = true; tryRematch(); }
+  if (mode === 'guest' && net) { net.send({ t: 'rematch' }); $('endStatus').textContent = 'Warte auf Gegner …'; }
+};
+
+/* ================= Zeichnen ================= */
+const COL = [{ main: '#ff4d5e', dark: '#a8202f', band: '#ffd36a', skin: '#e0ac7e' }, { main: '#3fa9ff', dark: '#1a5fa0', band: '#ffffff', skin: '#8d5a3b' }];
+const bg = document.createElement('canvas'); bg.width = W; bg.height = H;
+(function drawBg(){
+  const b = bg.getContext('2d');
+  const g = b.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1a1040'); g.addColorStop(.6, '#5a2a6e'); g.addColorStop(1, '#ff8a5c');
+  b.fillStyle = g; b.fillRect(0, 0, W, H);
+  b.fillStyle = 'rgba(255,200,120,.9)'; b.beginPath(); b.arc(W/2, 300, 90, 0, Math.PI*2); b.fill();
+  let x = 0; let s = 7;
+  const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+  while (x < W) { const w = 40 + rnd()*80, h = 80 + rnd()*200; b.fillStyle = '#24163f'; b.fillRect(x, FLOOR - 40 - h, w, h + 40);
+    for (let yy = FLOOR - 30 - h; yy < FLOOR - 50; yy += 18) for (let xx = x + 6; xx < x + w - 10; xx += 14) if (rnd() < .3) { b.fillStyle = '#ffcf6a'; b.fillRect(xx, yy, 6, 8); }
+    x += w + 3; }
+  // Dach-Arena
+  b.fillStyle = '#2e2552'; b.fillRect(0, FLOOR, W, H - FLOOR);
+  b.fillStyle = '#4a3d7d'; b.fillRect(0, FLOOR, W, 6);
+  b.strokeStyle = 'rgba(255,255,255,.08)'; b.lineWidth = 2;
+  for (let i = -10; i < 20; i++) { b.beginPath(); b.moveTo(W/2 + i*40, FLOOR + 6); b.lineTo(W/2 + i*110, H); b.stroke(); }
+  // Seile / Geländer
+  b.strokeStyle = 'rgba(255,255,255,.18)'; b.lineWidth = 3;
+  for (const yy of [FLOOR - 60, FLOOR - 30]) { b.beginPath(); b.moveTo(0, yy); b.lineTo(W, yy); b.stroke(); }
+})();
+
+function limb(x1, y1, x2, y2, col, w){ ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+function circ(x, y, r, c){ ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill(); }
+
+function drawFighter(f, i, rx, ry){
+  const c = COL[i], t = f.t, frame = performance.now() / 1000;
+  ctx.save(); ctx.translate(rx, ry); ctx.scale(f.face, 1);
+  // Schatten
+  ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(0, FLOOR - ry + 4, 34, 7, 0, 0, Math.PI*2); ctx.fill();
+  if (f.st === 'ko' && f.y >= FLOOR) { ctx.rotate(-Math.PI/2 * 0.95); ctx.translate(-10, 20); }
+  let lean = 0; if (f.st === 'hit') lean = -0.25; else if (f.st === 'punch' || f.st === 'kick') lean = 0.08;
+  ctx.rotate(lean);
+  const hipY = -52, shY = -98, headY = -118;
+  const bob = (f.st === 'idle' || f.st === 'block') ? Math.sin(frame*5 + i) * 2 : 0;
+  // Beine
+  let lf = [-14, 0], rf = [16, 0], lk = [-10, -26], rk = [14, -26];
+  if (f.st === 'walk') { const s = Math.sin(frame*12) * 14; lf = [-12 + s, 0]; rf = [14 - s, 0]; lk = [-8 + s/2, -26]; rk = [12 - s/2, -26]; }
+  if (f.st === 'jump' || f.y < FLOOR - 2) { lf = [-16, -14]; rf = [10, -20]; lk = [-4, -36]; rk = [22, -36]; }
+  if (f.st === 'kick') { const ext = t >= 7 && t <= 16; rk = ext ? [30, -56] : [22, -40]; rf = ext ? [68, -62] : [30, -34]; lf = [-18, 0]; lk = [-14, -26]; }
+  limb(0, hipY + bob, lk[0], lk[1], c.dark, 10); limb(lk[0], lk[1], lf[0], lf[1], c.dark, 9);
+  limb(0, hipY + bob, rk[0], rk[1], c.dark, 10); limb(rk[0], rk[1], rf[0], rf[1], c.dark, 9);
+  circ(lf[0] + 3, lf[1] - 1, 5, '#222'); circ(rf[0] + 3, rf[1] - 1, 5, '#222');
+  // Körper
+  ctx.fillStyle = c.main; ctx.beginPath(); ctx.moveTo(-14, shY + bob); ctx.lineTo(14, shY + bob); ctx.lineTo(11, hipY + 4 + bob); ctx.lineTo(-11, hipY + 4 + bob); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#1b1b1b'; ctx.fillRect(-12, hipY - 4 + bob, 24, 6); // Gürtel
+  // Arme
+  let la = [[-6, shY + 22], [10, shY - 4]], ra = [[16, shY + 20], [26, shY - 6]];
+  if (f.st === 'punch') { const ext = t >= 3 && t <= 10; ra = ext ? [[36, shY + 4], [64, shY + 2]] : [[20, shY + 14], [30, shY]]; }
+  if (f.st === 'block') { la = [[14, shY + 6], [22, shY - 22]]; ra = [[20, shY + 10], [26, shY - 18]]; }
+  if (f.st === 'special') { const ext = t >= 8; ra = ext ? [[34, shY + 6], [58, shY + 8]] : [[-10, shY + 20], [-4, shY + 30]]; la = ext ? [[30, shY + 12], [54, shY + 14]] : [[-14, shY + 18], [-8, shY + 30]]; }
+  if (f.st === 'hit') { la = [[-16, shY + 18], [-26, shY + 2]]; ra = [[-4, shY + 22], [-18, shY + 8]]; }
+  limb(-8, shY + 4 + bob, la[0][0], la[0][1] + bob, c.dark, 8); limb(la[0][0], la[0][1] + bob, la[1][0], la[1][1] + bob, c.dark, 8);
+  circ(la[1][0], la[1][1] + bob, 7, c.skin);
+  // Kopf
+  circ(2, headY + bob, 15, c.skin);
+  ctx.fillStyle = c.band; ctx.fillRect(-13, headY - 9 + bob, 30, 6);
+  ctx.strokeStyle = c.band; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(-12, headY - 6 + bob); ctx.quadraticCurveTo(-26, headY - 4 + Math.sin(frame*8)*4, -32, headY + 6 + bob); ctx.stroke();
+  ctx.fillStyle = '#1a1a1a'; ctx.beginPath(); ctx.arc(2, headY - 4 + bob, 15, Math.PI*1.05, Math.PI*1.95); ctx.fill();
+  if (f.st === 'ko') { ctx.strokeStyle = '#222'; ctx.lineWidth = 2; for (const ex of [6, 12]) { ctx.beginPath(); ctx.moveTo(ex-2, headY-2); ctx.lineTo(ex+2, headY+2); ctx.moveTo(ex+2, headY-2); ctx.lineTo(ex-2, headY+2); ctx.stroke(); } }
+  else { circ(10, headY + bob, 2.3, '#111'); limb(6, headY + 8 + bob, 12, headY + 7 + bob, '#5a2a1a', 2); }
+  // vorderer Arm (über dem Körper)
+  limb(14, shY + 4 + bob, ra[0][0], ra[0][1] + bob, c.dark, 9); limb(ra[0][0], ra[0][1] + bob, ra[1][0], ra[1][1] + bob, c.dark, 9);
+  circ(ra[1][0], ra[1][1] + bob, 8, c.skin);
+  ctx.restore();
+}
+
+function drawHUD(){
+  const bw = 360;
+  for (let i = 0; i < 2; i++) {
+    const f = G.f[i], c = COL[i], x = i ? W - 30 - bw : 30;
+    ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(x - 3, 23, bw + 6, 26);
+    const w = bw * Math.max(0, f.hp) / 100;
+    const g = ctx.createLinearGradient(x, 0, x + bw, 0); g.addColorStop(0, f.hp > 30 ? '#ffe066' : '#ff4040'); g.addColorStop(1, f.hp > 30 ? '#4cd964' : '#ff8040');
+    ctx.fillStyle = g; ctx.fillRect(i ? x + bw - w : x, 26, w, 20);
+    // Energie
+    ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.fillRect(x - 2, 53, bw*0.6 + 4, 10);
+    ctx.fillStyle = f.en >= 100 ? (Math.floor(performance.now()/150)%2 ? '#ffd36a' : '#fff') : '#c792ff';
+    const ew = bw*0.6*f.en/100; ctx.fillRect(i ? x + bw - bw*0.6 + (bw*0.6 - ew) : x, 55, ew, 6);
+    ctx.font = '800 17px system-ui'; ctx.fillStyle = c.main; ctx.textAlign = i ? 'right' : 'left';
+    ctx.fillText(G.names[i] + (G.wins[i] ? '  ' + '★'.repeat(G.wins[i]) : ''), i ? x + bw : x, 84);
+    if (f.en >= 100) { ctx.font = '700 11px system-ui'; ctx.fillStyle = '#ffd36a'; ctx.fillText('SPEZIAL BEREIT', i ? x + bw - bw*0.6 - 6 : x + bw*0.6 + 8, 62); }
+  }
+  ctx.textAlign = 'center'; ctx.font = '900 34px system-ui'; ctx.fillStyle = '#fff';
+  ctx.fillText(Math.ceil(G.timer / 60), W/2, 50);
+  ctx.font = '700 12px system-ui'; ctx.fillStyle = '#d0c8f0'; ctx.fillText('RUNDE ' + G.round, W/2, 68);
+  // Wer bin ich
+  const me = mode === 'guest' ? 1 : 0;
+  if (mode !== 'cpu') { ctx.font = '700 12px system-ui'; ctx.fillStyle = COL[me].main; ctx.fillText('Du bist ' + (me ? 'BLAU' : 'ROT'), W/2, 86); }
+}
+
+function bigText(s, y, size, col){ ctx.textAlign = 'center'; ctx.font = `900 ${size}px system-ui`; ctx.lineWidth = size/8; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.strokeText(s, W/2, y); ctx.fillStyle = col; ctx.fillText(s, W/2, y); }
+
+const rpos = [{ x: 260, y: FLOOR }, { x: 700, y: FLOOR }];
+let shake = 0, seenFx = 0, sparks = [];
+function draw(){
+  ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
+  if (shake > 0) { ctx.translate((Math.random()-.5)*shake, (Math.random()-.5)*shake); shake *= 0.85; if (shake < .5) shake = 0; }
+  ctx.drawImage(bg, 0, 0);
+  if (!G) { return; }
+  // neue Effekte → Sound & Funken
+  for (const fx of G.fx) if (fx.id > seenFx) {
+    seenFx = fx.id;
+    if (fx.type.startsWith('snd:')) { const s = SFX[fx.type.slice(4)]; s && s(); continue; }
+    if (fx.type === 'hit') { SFX.hit(); shake = 6; }
+    if (fx.type === 'heavy') { SFX.heavy(); shake = 10; }
+    if (fx.type === 'block') SFX.block();
+    if (fx.type === 'ko') { SFX.ko(); shake = 16; }
+    for (let k = 0; k < (fx.type === 'block' ? 6 : 14); k++) sparks.push({ x: fx.x, y: fx.y, vx: (Math.random()-.5)*9, vy: (Math.random()-.7)*8, l: 22 + Math.random()*10, c: fx.type === 'block' ? '#9fd3ff' : (Math.random() < .5 ? '#ffd36a' : '#ff6a3a') });
+  }
+  if (seenFx > fxId && mode !== 'guest') seenFx = fxId;
+  for (let i = 0; i < 2; i++) {
+    const f = G.f[i], r = rpos[i];
+    if (mode === 'guest') { r.x += (f.x - r.x) * 0.5; r.y += (f.y - r.y) * 0.5; } else { r.x = f.x; r.y = f.y; }
+  }
+  // Wer zuletzt angreift, wird vorne gezeichnet
+  const order = MOVES[G.f[0].st] ? [1, 0] : [0, 1];
+  for (const i of order) drawFighter(G.f[i], i, rpos[i].x, rpos[i].y);
+  for (const p of G.pr) {
+    const g = ctx.createRadialGradient(p.x, p.y, 2, p.x, p.y, 26); g.addColorStop(0, '#fff'); g.addColorStop(.4, p.o ? '#7fd0ff' : '#ffb04a'); g.addColorStop(1, 'rgba(255,120,40,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, 26, 0, Math.PI*2); ctx.fill();
+  }
+  for (const s of sparks) { s.x += s.vx; s.y += s.vy; s.vy += .4; s.l--; ctx.globalAlpha = Math.min(1, s.l/12); ctx.fillStyle = s.c; ctx.fillRect(s.x - 2.5, s.y - 2.5, 5, 5); }
+  ctx.globalAlpha = 1; sparks = sparks.filter(s => s.l > 0);
+  drawHUD();
+  if (G.ph === 'intro') { if (G.pt < 60) bigText('RUNDE ' + G.round, H/2 - 20, 64, '#fff'); else bigText('KÄMPFT!', H/2 - 20, 76, '#ffd36a'); }
+  if (G.ph === 'roundend') {
+    const w = G.lastWin;
+    bigText(G.f[0].hp <= 0 || G.f[1].hp <= 0 ? 'K.O.!' : 'ZEIT!', H/2 - 40, 80, '#ff4d5e');
+    bigText(w < 0 ? 'Unentschieden' : G.names[w] + ' gewinnt die Runde', H/2 + 20, 30, '#fff');
+  }
+  if (G.ph !== 'matchend' && !$('end').classList.contains('hidden') && (mode === 'host' || mode === 'guest' || mode === 'cpu')) show(null);
+  if (G.ph === 'matchend' && $('end').classList.contains('hidden') && mode !== 'menu') {
+    const me = mode === 'guest' ? 1 : 0;
+    const iWon = G.winner === me;
+    $('endTitle').textContent = mode === 'cpu' ? (iWon ? 'SIEG!' : 'NIEDERLAGE') : (iWon ? 'SIEG!' : 'NIEDERLAGE');
+    $('endSub').textContent = G.names[G.winner] + ' gewinnt ' + G.wins[G.winner] + ':' + G.wins[1 - G.winner];
+    $('endStatus').textContent = ''; show('end');
+  }
+}
+
+/* ================= Hauptschleife ================= */
+let last = performance.now(), acc = 0, sendAcc = 0, guestSendT = 0, guestLastBits = -1;
+function loop(now){
+  const dt = Math.min(100, now - last); last = now; acc += dt;
+  while (acc >= 1000/60) {
+    acc -= 1000/60;
+    if ((mode === 'host' || mode === 'cpu') && G) {
+      const mine = localBits(), e0 = localEdges; localEdges = 0;
+      let other, e1;
+      if (mode === 'cpu') { other = cpuInput(); e1 = 0; }
+      else { other = remoteBits; e1 = remoteEdges; remoteEdges = 0; }
+      step([mine, other], [e0, e1]);
+      if (mode === 'host' && net && ++sendAcc >= 2) { sendAcc = 0; net.send({ t: 's', g: G }); }
+    }
+    if (mode === 'guest' && net) {
+      const b = localBits();
+      guestSendT++;
+      if (b !== guestLastBits || localEdges || guestSendT > 6) { net.send({ t: 'i', k: b, e: localEdges }); localEdges = 0; guestLastBits = b; guestSendT = 0; }
+    }
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+fit(); show('menu'); requestAnimationFrame(loop);
+window.__df = { get G(){ return G; }, get mode(){ return mode; } };
+})();
+</script>
+</body>
+</html>
